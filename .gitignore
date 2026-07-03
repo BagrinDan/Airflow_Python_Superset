@@ -148,6 +148,7 @@ activemq-data/
 *.sage.py
 
 # Environments
+airflow.env
 .env
 .envrc
 .venv

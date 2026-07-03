@@ -1,0 +1,2 @@
+apache-airflow-providers-microsoft-azure==11.0.0
+pyarrow==17.0.0
