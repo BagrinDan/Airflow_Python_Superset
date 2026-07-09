@@ -1,9 +1,13 @@
 from __future__ import annotations
 from datetime import datetime, timedelta
 from airflow import DAG
-from airflow.operators.bash import BashOperator
-#from airflow.operators.python import PythonOperator
+import sys
+from airflow.operators.python import PythonOperator
 
+
+sys.path.append('/opt/airflow/dags')
+
+from scripts.transformation.unify_datasets import unify_dataset
 
 default_args = {
     'owner': 'airflow',
@@ -15,17 +19,24 @@ default_args = {
 }
 
 with DAG(
-    dag_id='wizard_bronze_to_silver_v2',
-    description='Simple Hello World test for DAG-script connection',
+    dag_id='unify_datasets',
+    description='Unify all datasets in one',
     start_date=datetime(2026, 7, 5),
     schedule_interval=None,
     catchup=False,
     tags=['test']
 ) as dag:
     
-    run_hello_world = BashOperator(
+    unify_datasets = PythonOperator(
         task_id='execute_hello_world',
-        bash_command='echo "================ HELLO WORLD ================"'
+        python_callable=unify_dataset,
+        op_kwargs={
+            'azure_conn_id':'AzureDataLake',
+            'source_container': 'bronze',
+            'source_dirs': ['datasets/'],
+            'target_container': 'bronze',
+            'target_dir': 'all_in_one/'
+        }
     )
 
-    run_hello_world
+    unify_datasets
