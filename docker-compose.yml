@@ -4,6 +4,7 @@ x-airflow-common: &airflow-common
     dockerfile: Dockerfile
   env_file:
     - airflow.env
+    - .env
   environment:
     AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow_metadata 
   volumes:

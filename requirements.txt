@@ -2,3 +2,4 @@ apache-airflow-providers-microsoft-azure==11.0.0
 pyarrow==17.0.0
 pandas>=2.0.0
 fastparquet>=2023.4.0
+python-dotenv
