@@ -9,7 +9,7 @@ sys.path.append('/opt/airflow/dags')
 
 from scripts.transformation.unify_datasets import unify_dataset
 from scripts.transformation.clean_dataset import cleaning
-
+from scripts.transformation.transformation import transform
 
 
 default_args = {
@@ -27,7 +27,7 @@ with DAG(
     start_date=datetime(2026, 7, 5),
     schedule_interval=None,
     catchup=False,
-    tags=['test']
+    tags=['prod']
 ) as dag:
     
     # Merge datasets in one
@@ -49,4 +49,26 @@ with DAG(
         python_callable=cleaning
     )
 
-    unify_datasets >> cleaning_dataset
+    transformation = PythonOperator(
+        task_id="transform",
+        python_callable=transform
+    )
+
+    unify_datasets >> cleaning_dataset >> transformation
+
+with DAG(
+    dag_id='Transformation',
+    description='ETL pipeline',
+    start_date=datetime(2026, 7, 5),
+    schedule_interval=None,
+    catchup=False,
+    tags=['test']
+) as dag:
+    
+
+    transformation = PythonOperator(
+        task_id="transform",
+        python_callable=transform
+    )
+
+    transformation
