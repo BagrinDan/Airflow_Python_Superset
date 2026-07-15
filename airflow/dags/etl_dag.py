@@ -4,10 +4,13 @@ from airflow import DAG
 import sys
 from airflow.operators.python import PythonOperator
 
-
 sys.path.append('/opt/airflow/dags')
 
+
 from scripts.transformation.unify_datasets import unify_dataset
+from scripts.transformation.clean_dataset import cleaning
+from scripts.transformation.transformation import transform
+
 
 default_args = {
     'owner': 'airflow',
@@ -19,16 +22,17 @@ default_args = {
 }
 
 with DAG(
-    dag_id='unify_datasets',
-    description='Unify all datasets in one',
+    dag_id='ETL_pipeline',
+    description='ETL pipeline',
     start_date=datetime(2026, 7, 5),
     schedule_interval=None,
     catchup=False,
-    tags=['test']
+    tags=['prod']
 ) as dag:
     
+    # Merge datasets in one
     unify_datasets = PythonOperator(
-        task_id='execute_hello_world',
+        task_id='merge_datasets',
         python_callable=unify_dataset,
         op_kwargs={
             'azure_conn_id':'AzureDataLake',
@@ -39,4 +43,32 @@ with DAG(
         }
     )
 
-    unify_datasets
+    # Cleaning 
+    cleaning_dataset = PythonOperator(
+        task_id="clean_dataset",
+        python_callable=cleaning
+    )
+
+    transformation = PythonOperator(
+        task_id="transform",
+        python_callable=transform
+    )
+
+    unify_datasets >> cleaning_dataset >> transformation
+
+with DAG(
+    dag_id='Transformation',
+    description='ETL pipeline',
+    start_date=datetime(2026, 7, 5),
+    schedule_interval=None,
+    catchup=False,
+    tags=['test']
+) as dag:
+    
+
+    transformation = PythonOperator(
+        task_id="transform",
+        python_callable=transform
+    )
+
+    transformation
