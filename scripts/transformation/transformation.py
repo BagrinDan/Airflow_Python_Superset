@@ -95,6 +95,15 @@ def build_star_scheme(df):
         'unitmeasure_koef', 'weight', 'volume'
     ]].reset_index(drop=True)
 
+    numeric_cols = [
+        'quantity', 'price', 'totalamount', 'vatamount', 'vat',
+        'checksum_totalamount', 'checksum_vatamount',
+        'unitmeasure_koef', 'weight', 'volume'
+    ]
+
+    for col in numeric_cols:
+        fact_sales[col] = pd.to_numeric(fact_sales[col], errors='coerce')
+
     return {
         'dim_products': dim_products,
         'dim_unitmeasure': dim_unitmeasure,
@@ -129,6 +138,12 @@ def getData():
 
 # 2. Save data
 def save_tables(tables: dict, engine, if_exists: str = "replace"):
+
+    if if_exists == "replace":
+        print("[*] Dropping existing tables with CASCADE to avoid constraint conflicts...")
+        with engine.begin() as conn:
+            for table_name in tables.keys():
+                conn.execute(f"DROP TABLE IF EXISTS {table_name} CASCADE;")
 
     for name, table_df in tables.items():
         table_df.to_sql(
