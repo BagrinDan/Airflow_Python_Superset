@@ -40,6 +40,17 @@ services:
       retries: 5
     restart: always
 
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter
+    container_name: postgres_exporter
+    restart: always
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/postgres?sslmode=disable"
+    ports:
+      - "9187:9187"
+    depends_on:
+      - postgres
+
   # ==========================================
   # APACHE AIRFLOW COMPONENTS
   # ==========================================
@@ -120,6 +131,82 @@ services:
       postgres:
         condition: service_healthy
 
+# ==================
+#  MONITORING STACK
+# ==================
+
+  # Promtail - to get metrics
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: prometheus
+    ports: ["9090:9090"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    restart: always
+
+  # Loki - db to store logs
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: loki
+    ports: ["3100:3100"]
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: always
+
+  # Promtail - to get logs from docker
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: promtail
+    volumes:
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    restart: always
+    depends_on: [loki]
+
+  # Grafana - for vizualization
+  grafana:
+    image: grafana/grafana:10.4.1
+    container_name: grafana
+    ports: ["3000:3000"]
+    volumes:
+      - grafana_data:/var/lib/grafana
+    restart: always
+    depends_on: [prometheus, loki]
+
+
+  # Global node to get all info about server
+  node-exporter:
+    image: prom/node-exporter:v1.8.1
+    container_name: node_exporter
+    restart: always
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($|/)'
+
+  # Need to get CPU/Mem usage for every service
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    ports:
+      - "8081:8080"
+
 volumes:
   postgres_data:
   superset_home:
+  prometheus_data:
+  grafana_data:
